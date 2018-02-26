@@ -53,7 +53,7 @@ def createpasswd(needlowercase = True, needuppercase = True, needdigits = True, 
 def createdict(sitename, username, dict_text = None):
     
     sitename = sitename.lower ().replace(' ', '')
-    username = username.lower ().replace ( ' ' , '' )
+    username = username.lower ().replace ( ' ', '' )
     load_dict = dict_text
 
     if isinstance(load_dict, dict) and load_dict != None and (sitename + ' ' + username) in load_dict:
