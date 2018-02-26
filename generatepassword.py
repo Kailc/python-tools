@@ -3,9 +3,10 @@
 import random
 import string
 import os
-import json
 from Crypto.Cipher import AES
 import base64
+import getopt
+import sys
 
 
 # whitespace = ' \t\n\r\v\f'
@@ -54,20 +55,9 @@ def createdict(sitename, username, dict_text = None):
     sitename = sitename.lower ().replace(' ', '')
     username = username.lower ().replace ( ' ' , '' )
     load_dict = dict_text
-    
-    # path = os.getcwd() + '\\xxxx'
-    # if os.name != 'nt':
-    #     path = path.replace('\\', '/')
-    # if os.path.isfile(path):
-    #     with open ( path , 'r' ) as f:
-    #         load_dict = json.load ( f )
-    #         f.close ()
-    #         if (sitename + ' ' + username) in load_dict:
-    #             print ( 'Sitename:', sitename, '\nUsername:', username, '\nPasswd:',
-    #                     load_dict[ sitename + ' ' + username ] )
-    #             return load_dict
-    if load_dict == dict and load_dict != None and (sitename + ' ' + username) in load_dict:
-        print ( 'Account already exists!\n', 'Sitename:' , sitename , '\nUsername:' , username , '\nPasswd:' ,
+
+    if isinstance(load_dict, dict) and load_dict != None and (sitename + ' ' + username) in load_dict:
+        print ( 'Account already exists!\nSitename:' , sitename , '\nUsername:' , username , '\nPasswd:' ,
                 load_dict[ sitename + ' ' + username ] )
         return load_dict
 
@@ -76,15 +66,14 @@ def createdict(sitename, username, dict_text = None):
         sitename + ' ' + username: passwd
     }
 
-    if load_dict == dict and load_dict != None:
+    if isinstance(load_dict, dict) and load_dict != None:
         for i in load_dict:
             passwd_dict[i] = load_dict[i]
         
-    print ( 'Sitename:', sitename, '\nUsername:', username, '\nPasswd:', passwd )
+    print ( 'Generate password success!\nSitename:', sitename, '\nUsername:', username, '\nPasswd:', passwd )
     return passwd_dict
 
 def tobytesandpad16(text):
-    # text = str.encode ( text )
     while len(text) % 16 != 0:
         text += '\0'
     return str.encode ( text )
@@ -94,20 +83,20 @@ def pad16(text):
         text += b' '
     return text
 
-'''
-mod = 0 encrypt
-mod = 1 decrypt
-'''
+
+# mod = 0 encrypt
+# mod = 1 decrypt
+
 def encryptanddecrypt_aes(text, mod = 0, secret_key = 'abcdefghijklmnop'):
     if mod != 0 and mod != 1:
         print('mode error', mod)
         return None
-
+    # print(tobytesandpad16(secret_key))
     aes = AES.new(tobytesandpad16(secret_key), AES.MODE_ECB)
     if mod == 0:
-        return str(base64.encodebytes(aes.encrypt ( tobytesandpad16 ( text ) )), encoding='utf-8')
+        return str(base64.encodebytes(aes.encrypt ( tobytesandpad16 ( text ) )), encoding='utf-8').replace('\0', '')
     else:
-        return str(aes.decrypt(base64.decodebytes(text.encode(encoding='utf-8'))),encoding='utf-8')
+        return str(aes.decrypt(base64.decodebytes(text.encode(encoding='utf-8'))),encoding='utf-8').replace('\0', '')
 
 def getcipher(fileame = 'xxxx'):
     text = None
@@ -128,14 +117,75 @@ def storecipher(text = '', fileame = 'xxxx'):
         f.write ( text )
         f.close ()
     print('store in', path)
+
+def usage():
+    message ='''
+gp(generatepassword), version 0.1
+
+    '''
+    print(message)
+    sys.exit()
         
+def getvalue():
+    try:
+        options, args = getopt.getopt(sys.argv[1:], 'hlUdpw:f:k:', ['help', 'lower', 'upper', 'digit', 'punctuation', 'passwdlen=', 'filename=', 'secret='])
+    except getopt.GetoptError as e:
+        print(e)
+        sys.exit()
+    needlowercase = False
+    needuppercase = False
+    needdigits = False
+    needpunctuation = False
+    passwdlen = 10
+    filename = 'xxxx'
+    secretkey = 'abcdefghijklmnop'
+    sitename = ''
+    username = ''
+    for name, value in options:
+        if name in ('-h', '--help'):
+            usage()
+        elif name in ('-l', '--lower'):
+            needlowercase = True
+        elif name in ('-U', '--upper'):
+            needuppercase = True
+        elif name in ('-d', '--digit'):
+            needdigits = True
+        elif name in ('-p', '--punctuation'):
+            needpunctuation = True
+        elif name in ('-w', '--passwdlen'):
+            if not str(value).isdigit():
+                print('passwdlen error!')
+                sys.exit()
+            passwdlen = int(value)
+        elif name in ('-f', '--filename'):
+            filename = str(value)
+        elif name in ('-k', '--secret'):
+            secretkey = str(value)
+        elif name in ('-s', '--sitename'):
+            sitename = str(value)
+        elif name in ('-u', '--username'):
+            username = str(value)
+        else:
+            print('Use the default value!')
+
+    if sitename == '':
+        print('There\'s no sitename!')
+        sys.exit()
+    if username == '':
+        print('There\'s no username!''')
+        sys.exit()
+    return needlowercase, needuppercase, needdigits, needpunctuation, passwdlen, filename, secretkey, sitename, username
 
 def main():
-    ciphertext = getcipher()
+    needlowercase , needuppercase , needdigits , needpunctuation , passwdlen , filename , secretkey, sitename, username = getvalue()
+    cleartext = None
+    ciphertext = getcipher(filename)
     if ciphertext != None:
-        cleartext = encryptanddecrypt_aes(ciphertext, mod=1)
-    # print(type(eval(cleartext)))
-    createdict('aaa', 'ssss', eval(cleartext))
+        cleartext = encryptanddecrypt_aes(ciphertext, mod=1, secret_key=secretkey)
+        cleartext = eval(cleartext)
+
+    storecipher(text=encryptanddecrypt_aes(str(createdict(sitename, username, cleartext)), mod=0, secret_key=secretkey))
     
 if __name__ == '__main__':
+    # getvalue()
     main()
