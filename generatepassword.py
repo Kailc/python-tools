@@ -98,29 +98,60 @@ def encryptanddecrypt_aes(text, mod = 0, secret_key = 'abcdefghijklmnop'):
     else:
         return str(aes.decrypt(base64.decodebytes(text.encode(encoding='utf-8'))),encoding='utf-8').replace('\0', '')
 
-def getcipher(fileame = 'xxxx'):
+def getcipher(filename):
     text = None
-    path = os.getcwd() + '\\' + fileame
+
     if os.name != 'nt':
-        path = path.replace('\\', '/')
-    if os.path.isfile(path):
-        with open ( path , 'r' ) as f:
+        filename = filename.replace('\\', '/')
+    if os.path.isfile(filename):
+        with open ( filename , 'r' ) as f:
             text = f.read()
             f.close()
     return text
 
-def storecipher(text = '', fileame = 'xxxx'):
-    path = os.getcwd () + '\\' + fileame
+def storecipher(text, filename):
     if os.name != 'nt':
-        path = path.replace('\\', '/')
-    with open ( path , 'w' ) as f:
+        filename = filename.replace('\\', '/')
+    with open ( filename , 'w' ) as f:
         f.write ( text )
         f.close ()
-    print('store in', path)
+    print('store in', filename)
+
+def check_path(path):
+
+    if os.name != 'nt':
+        path = ((path.replace('\\', '/')).strip()).rstrip('/')
+    else:
+        path = path.strip().rstrip('\\')
+    if path == os.getcwd ():
+        return path
+    else:
+        if not os.path.exists(path):
+            os.makedirs (path)
+        elif not os.path.isdir(path):
+            print('The path is exists, but it\'s not a folder!')
+            sys.exit()
+        return path
 
 def usage():
     message ='''
 gp(generatepassword), version 0.1
+
+usage: gp [-d digit] [-f filename] [-h help] [-k secret] [-l lower] [-p punctuate]
+    [-P path] [-s sitename] [-u username] [-U upper] [-w passwdlen]
+	
+
+  d digit		: whether or not use char in '0123456789', the default is True.
+  f filename	: the name of password, the default path is './filename'.
+  h help		: print this help message.
+  k secret		: the secret key, the default is 'abcdefghijklmnop'.
+  l lower		: whether or not use lowercase letters('abcdefghijklmnopqrstuvwxyz'), the default is True.
+  p punctuate	: whether or not use punctuation("""!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~"""), the default is False.
+  P path		: the path to the folder where the password is located, the default path id './'.
+  s sitename	: the sitename, it is necessary.
+  u username	: the username, it is necessary.
+  U upper		: whether or not use upper letters('ABCDEFGHIJKLMNOPQRSTUVWXYZ'), the default is True.
+  w passwdlen	: the length of password, the default is 10.
 
     '''
     print(message)
@@ -128,19 +159,20 @@ gp(generatepassword), version 0.1
         
 def getvalue():
     try:
-        options, args = getopt.getopt(sys.argv[1:], 'hlUdpw:f:k:', ['help', 'lower', 'upper', 'digit', 'punctuation', 'passwdlen=', 'filename=', 'secret='])
+        options, args = getopt.getopt(sys.argv[1:], 'df:hk:lpP:s:u:Uw:', ['digit', 'filename=', 'help', 'secret=', 'lower', 'punctuate', 'path=', 'sitename=', 'username=', 'upper', 'passwdlen='])
     except getopt.GetoptError as e:
         print(e)
         sys.exit()
-    needlowercase = False
-    needuppercase = False
-    needdigits = False
+    needlowercase = True
+    needuppercase = True
+    needdigits = True
     needpunctuation = False
     passwdlen = 10
     filename = 'xxxx'
     secretkey = 'abcdefghijklmnop'
     sitename = ''
     username = ''
+    path = path = os.getcwd()
     for name, value in options:
         if name in ('-h', '--help'):
             usage()
@@ -150,7 +182,7 @@ def getvalue():
             needuppercase = True
         elif name in ('-d', '--digit'):
             needdigits = True
-        elif name in ('-p', '--punctuation'):
+        elif name in ('-p', '--punctuate'):
             needpunctuation = True
         elif name in ('-w', '--passwdlen'):
             if not str(value).isdigit():
@@ -165,6 +197,11 @@ def getvalue():
             sitename = str(value)
         elif name in ('-u', '--username'):
             username = str(value)
+        elif name in ('-P', '--path'):
+            value = str(value[:]).replace(' ', '')
+            if value != '':
+                path = check_path(value)
+
         else:
             print('Use the default value!')
 
@@ -174,18 +211,22 @@ def getvalue():
     if username == '':
         print('There\'s no username!''')
         sys.exit()
+
+    filename = path + '\\' + filename
+    if os.name != 'nt':
+        filename = filename.replace('\\', '/')
     return needlowercase, needuppercase, needdigits, needpunctuation, passwdlen, filename, secretkey, sitename, username
 
 def main():
     needlowercase , needuppercase , needdigits , needpunctuation , passwdlen , filename , secretkey, sitename, username = getvalue()
     cleartext = None
+    print(filename)
     ciphertext = getcipher(filename)
     if ciphertext != None:
         cleartext = encryptanddecrypt_aes(ciphertext, mod=1, secret_key=secretkey)
         cleartext = eval(cleartext)
 
-    storecipher(text=encryptanddecrypt_aes(str(createdict(sitename, username, cleartext)), mod=0, secret_key=secretkey))
+    storecipher(text=encryptanddecrypt_aes(str(createdict(sitename, username, cleartext)), mod=0, secret_key=secretkey), filename=filename)
     
 if __name__ == '__main__':
-    # getvalue()
     main()
